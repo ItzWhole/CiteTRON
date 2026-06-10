@@ -1,23 +1,23 @@
 # CiteTron
 
-A lightweight RAG pipeline that ingests a folder of academic PDFs and classifies whether a given claim is **supported**, **contradicted**, or **neutral** based on the literature.
+A RAG pipeline that ingests a folder of academic PDFs and checks whether a given claim is **supported**, **contradicted**, or **neutral** based on the literature.
 
-Built without heavy dependencies — no PyTorch, no LangChain, no boilerplate.
+No PyTorch. No LangChain. No boilerplate.
 
 ---
 
 ## How it works
 
 ```
-PDFs → text extraction → chunking → embeddings → FAISS index → retrieval → LLM stance classification
+PDFs -> text extraction -> chunking -> embeddings -> FAISS index -> retrieval -> LLM stance classification
 ```
 
-1. **Ingestion** — extracts and cleans text from all PDFs in the `Files here/` folder using `pdfplumber` (accurate) or `pypdf` (fast)
-2. **Chunking** — splits documents into sentence-boundary chunks with sentence-level overlap, preserving argument coherencegit add "Files here/.gitkeep"
-3. **Embedding** — encodes every chunk into a 384-dimensional vector using `BAAI/bge-small-en-v1.5` via `fastembed` (ONNX, no torch)
-4. **Indexing** — stores vectors in a FAISS flat index with cosine similarity
-5. **Retrieval** — embeds the input claim, fetches the top-k most semantically similar chunks
-6. **Stance detection** — passes each retrieved chunk to an LLM (Groq / Llama 3.1) and classifies it as `SUPPORTS`, `CONTRADICTS`, `NEUTRAL`, or `ERRONEOUS`
+1. **Ingestion** - extracts and cleans text from all PDFs in the `Files here/` folder using `pdfplumber` (accurate) or `pypdf` (fast)
+2. **Chunking** - splits documents into sentence-boundary chunks with sentence-level overlap
+3. **Embedding** - encodes each chunk into a 384-dim vector using `BAAI/bge-small-en-v1.5` via `fastembed` (ONNX, no torch)
+4. **Indexing** - stores vectors in a FAISS flat index with cosine similarity
+5. **Retrieval** - embeds the input claim and fetches the top-k most similar chunks
+6. **Stance detection** - sends each chunk to an LLM (Groq / Llama 3.1) and labels it `SUPPORTS`, `CONTRADICTS`, `NEUTRAL`, or `ERRONEOUS`
 
 ---
 
@@ -29,8 +29,6 @@ PDFs → text extraction → chunking → embeddings → FAISS index → retriev
 | Embeddings | `fastembed` (BAAI/bge-small-en-v1.5) |
 | Vector search | `faiss-cpu` |
 | Stance classification | `groq` (llama-3.1-8b-instant) |
-
-No PyTorch. No LangChain. Runs on CPU.
 
 ---
 
@@ -56,9 +54,9 @@ cp .env.example .env
 GROQ_API_KEY=your_groq_api_key_here
 ```
 
-> `.env` is gitignored and will never be committed — your key stays local.
+`.env` is gitignored and will never be committed.
 
-3. Drop your PDF files into the `Files here/` folder next to `CiteTron.py`
+3. Drop your PDFs into the `Files here/` folder next to `CiteTron.py`
 
 4. Set your claim in the `query` variable and run the script
 
@@ -72,7 +70,7 @@ Edit the `query` variable near the bottom of `CiteTron.py`:
 query = "Wealth distribution follows a power law."
 ```
 
-Then run the script. Results are grouped by paper:
+Results are grouped by paper:
 
 ```
 CLAIM: Wealth distribution follows a power law.
@@ -107,20 +105,21 @@ PAPER: econoc  (2 chunk(s) retrieved)
 
 ## Design decisions
 
-**Why not LangChain?** — The pipeline is simple enough to reason about directly. Fewer abstractions means easier debugging and full control over chunking, retrieval, and prompting.
+**Why not LangChain?** The pipeline is simple enough to reason about directly. Fewer abstractions means easier debugging and full control over chunking, retrieval, and prompting.
 
-**Why fastembed over sentence-transformers?** — fastembed runs on ONNX and has no PyTorch dependency, making it installable anywhere without GPU or CUDA setup.
+**Why fastembed over sentence-transformers?** fastembed runs on ONNX with no PyTorch dependency, so it installs anywhere without GPU or CUDA setup.
 
-**Why FAISS over a vector database?** — For a folder of papers, an in-memory flat index is instant to build and query. A server-based vector DB would add operational overhead with no benefit at this scale.
+**Why FAISS over a vector database?** For a folder of papers, an in-memory flat index is instant to build and query. A server-based vector DB adds operational overhead with no real benefit at this scale.
 
-**Why sentence-boundary chunking?** — Character-based chunking can cut mid-argument, degrading both retrieval scores and stance accuracy. Splitting on sentence boundaries keeps semantic units intact, and sentence-level overlap preserves context across chunk boundaries.
+**Why sentence-boundary chunking?** Character-based chunking cuts mid-argument, which hurts both retrieval scores and stance accuracy. Sentence boundaries keep semantic units intact, and sentence-level overlap preserves context between chunks.
 
-**Why an LLM for stance instead of a local NLI model?** — Small cross-encoders (DeBERTa-based) classify entailment well on clean sentence pairs but struggle with the hedged, citation-dense language of academic papers. An LLM handles implicit contradiction and context-dependent support more reliably.
+**Why an LLM for stance instead of a local NLI model?** Small cross-encoders (DeBERTa-based) work well on clean sentence pairs but struggle with the hedged, citation-dense language of academic papers. An LLM handles implicit contradiction and context-dependent support more reliably.
 
 ---
 
 ## Limitations
 
-- Equations and mathematical notation extracted from PDFs are often garbled — semantic meaning of math-heavy passages may be partially lost
-- Stance classification is sensitive to chunk boundaries; a key sentence split across two chunks may reduce accuracy
-- Performance degrades on image-only or scanned PDFs with no text layer
+- Equations and math notation extracted from PDFs are often garbled, so math-heavy passages may lose semantic meaning
+- Stance classification can miss arguments that span chunk boundaries
+- Image-only or scanned PDFs with no text layer will be skipped
+
