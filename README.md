@@ -13,7 +13,7 @@ PDFs → text extraction → chunking → embeddings → FAISS index → retriev
 ```
 
 1. **Ingestion** — extracts and cleans text from all PDFs in the `Files here/` folder using `pdfplumber` (accurate) or `pypdf` (fast)
-2. **Chunking** — splits documents into sentence-boundary chunks with sentence-level overlap, preserving argument coherence
+2. **Chunking** — splits documents into sentence-boundary chunks with sentence-level overlap, preserving argument coherencegit add "Files here/.gitkeep"
 3. **Embedding** — encodes every chunk into a 384-dimensional vector using `BAAI/bge-small-en-v1.5` via `fastembed` (ONNX, no torch)
 4. **Indexing** — stores vectors in a FAISS flat index with cosine similarity
 5. **Retrieval** — embeds the input claim, fetches the top-k most semantically similar chunks
@@ -44,15 +44,23 @@ pip install pdfplumber pypdf fastembed faiss-cpu groq python-dotenv nltk
 
 ## Setup
 
-1. Add your Groq API key to a `.env` file in the project root:
+1. Get a free API key from [Groq](https://console.groq.com)
+
+2. Copy `.env.example` to `.env` and paste your key in:
+
+```bash
+cp .env.example .env
+```
 
 ```
-GROQ_API_KEY=your_key_here
+GROQ_API_KEY=your_groq_api_key_here
 ```
 
-2. Drop your PDF files into the `Files here/` folder next to `CiteTron.py`
+> `.env` is gitignored and will never be committed — your key stays local.
 
-3. Set your claim in the `query` variable and run the script
+3. Drop your PDF files into the `Files here/` folder next to `CiteTron.py`
+
+4. Set your claim in the `query` variable and run the script
 
 ---
 
